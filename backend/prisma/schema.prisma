@@ -1,0 +1,182 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  avatar    String?
+  bio       String?
+  isOnline  Boolean  @default(false)
+  lastSeen  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // User position and status
+  position UserPosition?
+  status   UserStatus    @default(AVAILABLE)
+
+  // Relationships
+  sentMessages     Message[]           @relation("MessageSender")
+  receivedMessages Message[]           @relation("MessageReceiver")
+  createdSpaces    PrivateSpace[]      @relation("SpaceCreator")
+  spaceMembers     PrivateSpaceMember[]
+  sessions         UserSession[]
+  friendships      Friendship[]        @relation("UserFriendships")
+  friendOf         Friendship[]        @relation("FriendOf")
+  blockedUsers     BlockedUser[]       @relation("BlockerUser")
+  blockedBy        BlockedUser[]       @relation("BlockedUser")
+
+  @@map("users")
+}
+
+model UserPosition {
+  id     String @id @default(cuid())
+  userId String @unique
+  x      Float  @default(400)
+  y      Float  @default(300)
+  spaceId String? // null means main space
+  updatedAt DateTime @updatedAt
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  space PrivateSpace? @relation(fields: [spaceId], references: [id])
+
+  @@map("user_positions")
+}
+
+model Message {
+  id         String      @id @default(cuid())
+  content    String
+  type       MessageType @default(TEXT)
+  senderId   String
+  receiverId String?
+  spaceId    String?
+  isRead     Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  sender   User          @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User?         @relation("MessageReceiver", fields: [receiverId], references: [id])
+  space    PrivateSpace? @relation(fields: [spaceId], references: [id])
+
+  @@map("messages")
+}
+
+model PrivateSpace {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  isPrivate   Boolean   @default(true)
+  maxMembers  Int       @default(10)
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdBy User                 @relation("SpaceCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  members   PrivateSpaceMember[]
+  messages  Message[]
+  positions UserPosition[]
+
+  @@map("private_spaces")
+}
+
+model PrivateSpaceMember {
+  id      String           @id @default(cuid())
+  userId  String
+  spaceId String
+  role    SpaceMemberRole  @default(MEMBER)
+  joinedAt DateTime        @default(now())
+
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  space PrivateSpace @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, spaceId])
+  @@map("private_space_members")
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  userId    String
+  socketId  String   @unique
+  ipAddress String?
+  userAgent String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
+}
+
+model Friendship {
+  id        String           @id @default(cuid())
+  userId    String
+  friendId  String
+  status    FriendshipStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user   User @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
+  friend User @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@map("friendships")
+}
+
+model BlockedUser {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  reason    String?
+  createdAt DateTime @default(now())
+
+  blocker User @relation("BlockerUser", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlockedUser", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@map("blocked_users")
+}
+
+// Enums
+enum UserStatus {
+  AVAILABLE
+  BUSY
+  AWAY
+  INVISIBLE
+}
+
+enum MessageType {
+  TEXT
+  SYSTEM
+  JOIN
+  LEAVE
+}
+
+enum SpaceMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
