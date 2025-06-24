@@ -20,6 +20,7 @@ model User {
   email     String   @unique
   username  String   @unique
   password  String
+  displayName String
   avatar    String?
   bio       String?
   isOnline  Boolean  @default(false)
@@ -52,6 +53,8 @@ model UserPosition {
   y      Float  @default(300)
   spaceId String? // null means main space
   updatedAt DateTime @updatedAt
+  lastMovedAt DateTime
+  lastUpdatedAt DateTime
 
   user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   space PrivateSpace? @relation(fields: [spaceId], references: [id])
