@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsc -b && node dist/index.js"
+    "dev": "tsc -b && nodemon dist/index.js"
   },
   "keywords": [],
   "author": "",
@@ -13,10 +13,14 @@
   "dependencies": {
     "@prisma/client": "^6.9.0",
     "@types/express": "^5.0.3",
+    "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "env": "^0.0.2",
     "express": "^5.1.0",
-    "typescript": "^5.8.3"
+    "nodemon": "^3.1.10",
+    "react-router": "^7.6.2",
+    "typescript": "^5.8.3",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "prisma": "^6.9.0"
