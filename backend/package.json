@@ -4,7 +4,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsc -b && nodemon dist/index.js"
+    "script": "nodemon --watch src --ext ts --exec \"npm run build && node dist/index.js\"",
+    "build": "tsc -b",
+    "dev" : "npm run build && npm run script"
   },
   "keywords": [],
   "author": "",
@@ -19,7 +21,6 @@
     "env": "^0.0.2",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "nodemon": "^3.1.10",
     "react-router": "^7.6.2",
     "typescript": "^5.8.3",
     "uuid": "^11.1.0",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",
+    "nodemon": "^3.1.10",
     "prisma": "^6.9.0"
   }
 }
