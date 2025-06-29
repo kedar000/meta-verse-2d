@@ -6,11 +6,13 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+app.use(express.json());
 
 const signup = require("./routes/user/sign-up").default;
-
-app.use(express.json());
-app.use("/api/v1" , signup)
+const signin = require("./routes/user/sign-in").default;
+const movement = require("./routes/user/sign-in").default;
+app.use("/api/v1/sign-up" , signup)
+app.use("/api/v1/sign-in" , signin)
 
 app.listen(port, () => {
   console.log(` Server is running at http://localhost:${port}`);
