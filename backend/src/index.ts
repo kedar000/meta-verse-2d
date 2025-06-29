@@ -2,7 +2,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import startWebSocket from "./socket/movement";
-import { connectDB, disconnectDB } from "./prisma";
+import { connectDB, disconnectDB } from "./db/prisma";
 
 dotenv.config();
 
