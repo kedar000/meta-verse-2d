@@ -11,20 +11,23 @@ declare global {
   }
 }
 
-const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+const authMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   const authHeader = req.headers.authorization;
   console.log("<- Reached AuthMiddlware ->")
   if (!authHeader) {
-    return res.status(401).json({ error: "Authorization header is missing" });
+    res.status(401).json({ error: "Authorization header is missing" });
+    return ;
   }
 
   if (!authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Invalid Authorization scheme. Must use Bearer token" });
+    res.status(401).json({ error: "Invalid Authorization scheme. Must use Bearer token" });
+    return ;
   }
 
   const token = authHeader.split(" ")[1].trim();
   if (!token) {
-    return res.status(401).json({ error: "Token is missing" });
+    res.status(401).json({ error: "Token is missing" });
+    return; 
   }
 
   try {
@@ -32,7 +35,8 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
     req.user = decoded; 
     next();
   } catch (err) {
-    return res.status(401).json({ error: "Invalid or expired token" });
+    res.status(401).json({ error: "Invalid or expired token" });
+    return; 
   }
 };
 

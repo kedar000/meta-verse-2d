@@ -12,9 +12,11 @@ app.use(express.json());
 
 const signup = require("./routes/user/sign-up").default;
 const signin = require("./routes/user/sign-in").default;
-const movement = require("./routes/user/sign-in").default;
+const regionUser = require('./routes/adjacentUser.ts/getUser').default;
+
 app.use("/api/v1/sign-up" , signup)
 app.use("/api/v1/sign-in" , signin)
+app.use("/api/v1/region" , regionUser);
 
 startWebSocket()
 
