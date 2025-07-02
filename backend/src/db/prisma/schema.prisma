@@ -34,8 +34,8 @@ model User {
   // Relationships
   sentMessages     Message[]           @relation("MessageSender")
   receivedMessages Message[]           @relation("MessageReceiver")
-  createdSpaces    PrivateSpace[]      @relation("SpaceCreator")
-  spaceMembers     PrivateSpaceMember[]
+  createdSpaces    Space[]      @relation("SpaceCreator")
+  spaceMembers     SpaceMember[]
   sessions         UserSession[]
   friendships      Friendship[]        @relation("UserFriendships")
   friendOf         Friendship[]        @relation("FriendOf")
@@ -56,7 +56,7 @@ model UserPosition {
   lastUpdatedAt DateTime
 
   user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  space PrivateSpace? @relation(fields: [spaceId], references: [id])
+  space Space? @relation(fields: [spaceId], references: [id])
 
   @@map("user_positions")
 }
@@ -74,30 +74,30 @@ model Message {
 
   sender   User          @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
   receiver User?         @relation("MessageReceiver", fields: [receiverId], references: [id])
-  space    PrivateSpace? @relation(fields: [spaceId], references: [id])
+  space    Space? @relation(fields: [spaceId], references: [id])
 
   @@map("messages")
 }
 
-model PrivateSpace {
+model Space {
   id          String    @id @default(cuid())
   name        String
   description String?
-  isPrivate   Boolean   @default(true)
+  isPrivate   Boolean   @default(false)
   maxMembers  Int       @default(10)
   createdById String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   createdBy User                 @relation("SpaceCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  members   PrivateSpaceMember[]
+  members   SpaceMember[]
   messages  Message[]
   positions UserPosition[]
 
-  @@map("private_spaces")
+  @@map("spaces")
 }
 
-model PrivateSpaceMember {
+model SpaceMember {
   id      String           @id @default(cuid())
   userId  String
   spaceId String
@@ -105,10 +105,10 @@ model PrivateSpaceMember {
   joinedAt DateTime        @default(now())
 
   user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  space PrivateSpace @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, spaceId])
-  @@map("private_space_members")
+  @@map("space_members")
 }
 
 model UserSession {
@@ -182,3 +182,4 @@ enum FriendshipStatus {
   DECLINED
   BLOCKED
 }
+

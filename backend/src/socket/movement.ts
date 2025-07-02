@@ -1,6 +1,7 @@
 // websocketServer.ts
 import { WebSocketServer, WebSocket } from 'ws';
 import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from "uuid";
 import { PrismaClient } from '@prisma/client';
 import isValidMove from '../controllers/grid/grid1';
 
@@ -15,8 +16,10 @@ export default function startWebSocket (){
         console.log("<- Web Socket Connected successfully ->")
         const url = new URL(req.url!, `http://${req.headers.host}`);
         const token = url.searchParams.get('token');
+        const spaceId = url.searchParams.get('space');
 
         if (!token) return ws.close();
+        // if(spaceId) return ws.close();
 
         try {
             const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
@@ -40,11 +43,22 @@ export default function startWebSocket (){
             })
             console.log("Initial position is added to the database - x : 10 , y : 10")
 
+            if (typeof spaceId === "undefined" || spaceId === null) {
+                 return ws.close();
+            }
+            await prisma.spaceMember.create({
+                data : {
+                    id : uuidv4(),
+                    spaceId : spaceId ,
+                    userId : userId,
+                }
+            })
+
             ws.on('message', async (raw) => {
             const msg = JSON.parse(raw.toString());
             console.log("RECIEVED MESSAGE - ", msg)
             if (msg.type === 'MOVE') {
-                const { x, y, spaceId } = msg;
+                const { x, y } = msg;
 
                 // validate bounds here if needed
                 const validMove : Boolean = isValidMove(x , y);
@@ -57,7 +71,7 @@ export default function startWebSocket (){
                     update: {
                         x,
                         y,
-                        // spaceId,
+                        spaceId,
                         lastUpdatedAt: now,
                         lastMovedAt: now
                     },
@@ -65,7 +79,7 @@ export default function startWebSocket (){
                         userId,
                         x,
                         y,
-                        // spaceId,
+                        spaceId,
                         lastUpdatedAt: now,
                         lastMovedAt: now
                     },
@@ -91,8 +105,21 @@ export default function startWebSocket (){
             }
             });
 
-            ws.on('close', () => {
+            ws.on('close', async () => {
                 console.log("<- Web Socket Disconnected ->")
+                try {
+                    await prisma.spaceMember.delete({
+                        where: {
+                            userId_spaceId: {
+                                userId: userId,
+                                spaceId: spaceId
+                            }
+                        }
+                    });
+                    console.log(`User ${userId} removed from space ${spaceId}`);
+                } catch (error) {
+                    console.error('Failed to remove user from spaceMember:', error);
+                }
                 connectedUsers.delete(userId);
             });
         } catch (err) {
