@@ -19,7 +19,6 @@ export default function startWebSocket (){
         const spaceId = url.searchParams.get('space');
 
         if (!token) return ws.close();
-        // if(spaceId) return ws.close();
 
         try {
             const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
@@ -42,10 +41,11 @@ export default function startWebSocket (){
             }
             })
             console.log("Initial position is added to the database - x : 10 , y : 10")
-
+            
             if (typeof spaceId === "undefined" || spaceId === null) {
-                 return ws.close();
+                return ws.close();
             }
+            
             await prisma.spaceMember.create({
                 data : {
                     id : uuidv4(),
@@ -53,6 +53,7 @@ export default function startWebSocket (){
                     userId : userId,
                 }
             })
+            console.log(`User ${userId} added to space ${spaceId}`);
 
             ws.on('message', async (raw) => {
             const msg = JSON.parse(raw.toString());
