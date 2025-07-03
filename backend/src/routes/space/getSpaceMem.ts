@@ -8,10 +8,13 @@ router.get(
     '/get-space-members',
     authMiddleware,
     async(req : Request , res : any)=>{
-        const { space } = req.params;
+        const { space } = req.query;
 
         if(!req.user || !req.user.id){
             return res.status(401).json({ error: "Unauthorized" });
+        }
+        if (typeof space !== "string") {
+        return res.status(400).json({ error: "Invalid or missing space ID" });
         }
         try {
             const allMembers = await prisma.spaceMember.findMany({
