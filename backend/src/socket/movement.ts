@@ -25,8 +25,8 @@ export default function startWebSocket (){
             const userId = decoded.id;
             (ws as any).userId = userId;
             connectedUsers.set(userId, ws);
-            const initialX = 10;
-            const initialY = 10;
+            const initialX = 25;
+            const initialY = 25;
             const now = new Date();
 
             await prisma.userPosition.upsert({

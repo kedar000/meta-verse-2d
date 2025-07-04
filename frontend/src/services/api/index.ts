@@ -1,3 +1,5 @@
 export { authService } from "./authService"
+export { spaceService } from "./spaceService"
 export { baseAPI, API_BASE_URL } from "./baseAPI"
 export type { SignUpRequest, SignUpResponse, SignInRequest, SignInResponse } from "./authService"
+export type { Space, GetSpacesResponse, CreateSpaceRequest, CreateSpaceResponse } from "./spaceService"
