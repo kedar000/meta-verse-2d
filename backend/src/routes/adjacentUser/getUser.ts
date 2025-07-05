@@ -39,7 +39,7 @@ router.get(
 
             }
         });
-
+        console.log("Fetched All near by users : " , nearbyUsers)
         return res.status(200).json({ nearbyUsers });
         } catch (error) {
         console.error("Error fetching users:", error);

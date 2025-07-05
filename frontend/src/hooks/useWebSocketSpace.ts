@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { websocketService, type UserPosition } from "../services/websocket/websocketService"
 import type { Space } from "../services/api"
-import { tokenService } from "../services/api/tokenService"
+import { userService } from "../services/api/userService"
 
 interface UseWebSocketSpaceProps {
   space: Space
@@ -18,24 +18,22 @@ export const useWebSocketSpace = ({ space, currentUser }: UseWebSocketSpaceProps
   const [connectedUsers, setConnectedUsers] = useState<Map<string, UserPosition>>(new Map())
   const [isConnected, setIsConnected] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
-  const [currentUserDisplayName, setCurrentUserDisplayName] = useState<string>("You")
+  const [currentUserDisplayName, setCurrentUserDisplayName] = useState<string>("Loading...")
   const hasInitialized = useRef(false)
   const currentSpaceId = useRef<string | null>(null)
   const connectionPromise = useRef<Promise<boolean> | null>(null)
 
-  // Get current user's display name from token or API
+  // Get current user's display name from API
   useEffect(() => {
     const getUserDisplayName = async () => {
       try {
-        // You might want to decode the JWT token to get the display name
-        // or make an API call to get user info
-        const token = tokenService.getTokenValue()
-        if (token) {
-          // For now, we'll use a default name, but you can decode JWT or make API call
-          setCurrentUserDisplayName("You") // You can replace this with actual display name
-        }
+        const response = await userService.getCurrentUser()
+        const displayName = response.user.displayName || response.user.email || "You"
+        setCurrentUserDisplayName(displayName)
+        console.log("Current user display name:", displayName)
       } catch (error) {
         console.error("Failed to get user display name:", error)
+        setCurrentUserDisplayName("You") // Fallback
       }
     }
 
@@ -170,7 +168,7 @@ export const useWebSocketSpace = ({ space, currentUser }: UseWebSocketSpaceProps
       x: currentUser.col,
       y: currentUser.row,
       spaceId: space.id,
-      name: currentUser.name,
+      name: currentUserDisplayName,
       displayName: currentUserDisplayName,
     })
 

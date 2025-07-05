@@ -15,6 +15,7 @@ app.use(express.json());
 
 const signup = require("./routes/user/sign-up").default;
 const signin = require("./routes/user/sign-in").default;
+const userInfo = require("./routes/user/userInfo").default;
 const regionUser = require('./routes/adjacentUser/getUser').default;
 const createSpace = require('./routes/space/createSpace').default;
 const getSpace= require('./routes/space/getSpaces').default;
@@ -22,6 +23,8 @@ const getSpaceMembers= require('./routes/space/getSpaceMem').default;
 
 app.use("/api/v1/sign-up" , signup)
 app.use("/api/v1/sign-in" , signin)
+app.use("/api/v1/user" , userInfo)
+app.use("/api/v1/region" , regionUser);
 app.use("/api/v1/region" , regionUser);
 app.use("/api/v1" , createSpace);
 app.use("/api/v1" , getSpace);
