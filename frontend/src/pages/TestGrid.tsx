@@ -175,22 +175,30 @@ const TestGrid = () => {
             display: "grid",
             gridTemplateColumns: `repeat(${viewportSize.cols}, 1fr)`,
             gridTemplateRows: `repeat(${viewportSize.rows}, 1fr)`,
-            transform: `scale(${zoom})`,
-            transformOrigin: "center",
+            gap: "1px",
+            padding: "2px",
           }}
         >
           {getVisibleCells().map((cell) => (
             <div
               key={`${cell.row}-${cell.col}`}
-              className={`flex items-center justify-center relative border-[0.5px] ${
-                cell.cellType === "#" ? "bg-gray-900 border-gray-700" : "bg-gray-100 border-gray-300"
+              className={`flex items-center justify-center relative ${
+                cell.cellType === "#" ? "bg-gray-900 border border-gray-800" : "bg-gray-50 border border-gray-200"
               }`}
+              style={{
+                minHeight: "48px",
+                minWidth: "48px",
+              }}
             >
               {cell.isPlayer && (
                 <>
-                  <div className="w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg" />
-                  <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white text-sm px-3 py-1 rounded whitespace-nowrap z-10 font-medium">
-                    🇮🇳 {player.name}
+                  <div className="relative z-10">
+                    <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-full border-3 border-white shadow-lg flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">{player.name.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-red-600 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap font-medium shadow-lg">
+                      🇮🇳 {player.name}
+                    </div>
                   </div>
                 </>
               )}
@@ -229,18 +237,6 @@ const TestGrid = () => {
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
-            </button>
-            <button
-              onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-              className="text-white hover:text-gray-300 text-xl font-bold"
-            >
-              −
-            </button>
-            <button
-              onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-              className="text-white hover:text-gray-300 text-xl font-bold"
-            >
-              +
             </button>
             <button className="text-white hover:text-gray-300">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -429,7 +425,7 @@ const TestGrid = () => {
             {getMinimapData().map((cell) => (
               <div
                 key={`minimap-${cell.row}-${cell.col}`}
-                className={`relative ${
+                className={`relative rounded-sm ${
                   cell.cellType === "#" ? "bg-gray-800" : cell.isInViewport ? "bg-blue-300" : "bg-gray-300"
                 }`}
                 style={{

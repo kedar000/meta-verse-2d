@@ -25,7 +25,6 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
   })
 
   // Camera/viewport settings
-  const [zoom, setZoom] = useState(1)
   const [viewportSize, setViewportSize] = useState({ rows: 20, cols: 30 })
 
   // Chat state
@@ -34,8 +33,9 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
   const [isMuted, setIsMuted] = useState(true)
   const [isVideoOff, setIsVideoOff] = useState(true)
 
-  // Region folks modal state
+  // UI state
   const [isRegionModalOpen, setIsRegionModalOpen] = useState(false)
+  const [showUsersModal, setShowUsersModal] = useState(false)
 
   // WebSocket connection - memoize the currentUser object to prevent unnecessary re-renders
   const currentUser = {
@@ -266,127 +266,130 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
             display: "grid",
             gridTemplateColumns: `repeat(${viewportSize.cols}, 1fr)`,
             gridTemplateRows: `repeat(${viewportSize.rows}, 1fr)`,
-            transform: `scale(${zoom})`,
-            transformOrigin: "center",
+            gap: "1px",
+            padding: "2px",
           }}
         >
           {getVisibleCells().map((cell) => (
             <div
               key={`${cell.row}-${cell.col}`}
-              className={`flex items-center justify-center relative border-[0.5px] ${
-                cell.cellType === "#" ? "bg-gray-900 border-gray-700" : "bg-gray-100 border-gray-300"
+              className={`flex items-center justify-center relative ${
+                cell.cellType === "#" ? "bg-gray-900 border border-gray-800" : "bg-gray-50 border border-gray-200"
               }`}
+              style={{
+                minHeight: "48px",
+                minWidth: "48px",
+              }}
             >
+              {/* Small dot indicator for walkable empty cells */}
+              {cell.cellType === "." && !cell.isCurrentPlayer && cell.otherUsers.length === 0 && (
+                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full opacity-30"></div>
+              )}
+
               {/* Current Player */}
               {cell.isCurrentPlayer && (
-                <>
-                  <div className="w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg z-10" />
-                  <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white text-sm px-3 py-1 rounded whitespace-nowrap z-20 font-medium">
+                <div className="relative z-10">
+                  <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-full border-3 border-white shadow-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">{player.name.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-red-600 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap font-medium shadow-lg">
                     🇮🇳 {player.name} (You)
                   </div>
-                </>
+                </div>
               )}
 
               {/* Other Users */}
-              {cell.otherUsers.map((user, index) => (
-                <div key={user.userId} className="absolute inset-0 flex items-center justify-center">
+              {cell.otherUsers.map((user, index) => {
+                const colors = [
+                  "from-blue-500 to-blue-600",
+                  "from-green-500 to-green-600",
+                  "from-purple-500 to-purple-600",
+                  "from-yellow-500 to-yellow-600",
+                  "from-pink-500 to-pink-600",
+                  "from-indigo-500 to-indigo-600",
+                ]
+                const bgColors = [
+                  "bg-blue-600",
+                  "bg-green-600",
+                  "bg-purple-600",
+                  "bg-yellow-600",
+                  "bg-pink-600",
+                  "bg-indigo-600",
+                ]
+                const colorIndex = index % colors.length
+                const displayName = user.displayName || user.name || `User ${user.userId.slice(0, 6)}`
+
+                return (
                   <div
-                    className="w-6 h-6 bg-green-500 rounded-full border-2 border-white shadow-lg z-10"
+                    key={user.userId}
+                    className="absolute inset-0 flex items-center justify-center"
                     style={{
-                      transform: `translate(${index * 8}px, ${index * 8}px)`, // Offset multiple users
-                    }}
-                  />
-                  <div
-                    className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-green-600 text-white text-sm px-3 py-1 rounded whitespace-nowrap z-20 font-medium"
-                    style={{
-                      transform: `translate(${index * 8}px, ${index * 8 - 32}px)`,
+                      transform: `translate(${index * 12}px, ${index * 12}px)`,
+                      zIndex: 10 - index,
                     }}
                   >
-                    👤 {user.displayName || user.name || `User ${user.userId.slice(0, 6)}`}
+                    <div
+                      className={`w-10 h-10 bg-gradient-to-br ${colors[colorIndex]} rounded-full border-3 border-white shadow-lg flex items-center justify-center`}
+                    >
+                      <span className="text-white font-bold text-lg">{displayName.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div
+                      className={`absolute -top-12 left-1/2 transform -translate-x-1/2 ${bgColors[colorIndex]} text-white text-xs px-2 py-1 rounded-full whitespace-nowrap font-medium shadow-lg`}
+                      style={{
+                        transform: `translate(-50%, ${index * 12 - 48}px)`,
+                      }}
+                    >
+                      👤 {displayName}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Space Info Header */}
+      {/* Space Name Header - Better positioned */}
       <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
-        <div className="bg-black bg-opacity-80 text-white text-center py-2 px-6 rounded-lg backdrop-blur-sm">
-          <div className="font-semibold text-lg flex items-center justify-center space-x-2">
-            <span>{space.name}</span>
-            <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}></div>
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl shadow-lg backdrop-blur-sm border border-white/20">
+          <div className="flex items-center justify-center space-x-3">
+            <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+            <h1 className="font-bold text-xl tracking-wide">{space.name}</h1>
+            <div className={`w-3 h-3 rounded-full ${isConnected ? "bg-green-400" : "bg-red-400"}`}></div>
           </div>
-          <div className="text-sm opacity-75">
-            Use WASD or Arrow Keys to move • Position: ({player.row}, {player.col}) • Users: {userCount}/
-            {space.maxMembers}
+          <div className="text-center text-sm opacity-90 mt-1">
+            Position: ({player.row}, {player.col})
           </div>
         </div>
       </div>
 
-      {/* Floating Top Left Controls with Exit Button */}
+      {/* Exit Button Only - Top Left */}
       <div className="absolute top-4 left-4 z-20">
-        <div className="flex items-center space-x-3">
-          {/* Exit Button */}
-          <button
-            onClick={handleExit}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-            <span>Exit Space</span>
-          </button>
-
-          {/* Game Controls */}
-          <div className="flex items-center space-x-2 bg-black bg-opacity-70 rounded-full px-4 py-2 backdrop-blur-sm">
-            <button className="text-white hover:text-gray-300">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-            </button>
-            <button
-              onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-              className="text-white hover:text-gray-300 text-xl font-bold"
-            >
-              −
-            </button>
-            <button
-              onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-              className="text-white hover:text-gray-300 text-xl font-bold"
-            >
-              +
-            </button>
-            <button className="text-white hover:text-gray-300">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
+        <button
+          onClick={handleExit}
+          className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+            />
+          </svg>
+          <span>Exit Space</span>
+        </button>
       </div>
 
-      {/* Floating Top Right Controls */}
+      {/* Top Right Controls */}
       <div className="absolute top-4 right-4 z-20">
-        <div className="flex items-center space-x-2">
-          <button className="bg-black bg-opacity-70 text-white px-3 py-2 rounded-lg hover:bg-opacity-80 flex items-center space-x-1 backdrop-blur-sm">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex items-center space-x-3">
+          {/* Clickable User Count */}
+          <button
+            onClick={() => setShowUsersModal(true)}
+            className="bg-black bg-opacity-70 text-white px-4 py-3 rounded-xl hover:bg-opacity-80 flex items-center space-x-2 backdrop-blur-sm transition-all duration-200 shadow-lg"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -394,15 +397,15 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
                 d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
               />
             </svg>
-            <span className="text-sm">{userCount}</span>
+            <span className="font-medium">{userCount}</span>
           </button>
 
           {/* Region Folks Button */}
           <button
             onClick={() => setIsRegionModalOpen(true)}
-            className="bg-purple-600 bg-opacity-90 text-white px-4 py-2 rounded-lg hover:bg-opacity-100 backdrop-blur-sm flex items-center space-x-2 transition-colors"
+            className="bg-purple-600 bg-opacity-90 text-white px-4 py-3 rounded-xl hover:bg-opacity-100 backdrop-blur-sm flex items-center space-x-2 transition-all duration-200 shadow-lg"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -410,104 +413,160 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
                 d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
               />
             </svg>
-            <span className="text-sm">Region Folks</span>
-          </button>
-
-          <button className="bg-blue-600 bg-opacity-90 text-white px-4 py-2 rounded-lg hover:bg-opacity-100 backdrop-blur-sm">
-            Invite
+            <span className="text-sm font-medium">Region Folks</span>
           </button>
         </div>
       </div>
 
-      {/* Floating Right Sidebar - Player Info */}
-      <div className="absolute top-20 right-4 z-20 w-72">
-        <div className="bg-black bg-opacity-80 rounded-lg p-4 backdrop-blur-sm">
-          <h3 className="text-white font-semibold mb-2">{player.name}</h3>
-          <div className="text-gray-300 text-sm mb-4">Space: {space.name}</div>
+      {/* Video Box - Right Side */}
+      <div className="absolute top-20 right-4 z-20 w-80">
+        <div className="bg-black bg-opacity-90 rounded-xl p-4 backdrop-blur-sm shadow-lg border border-white/10">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-semibold">Video</h3>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}></div>
+          </div>
 
-          {/* Connected Users List */}
-          <div className="mb-4">
-            <div className="text-white text-sm font-medium mb-2">Connected Users ({userCount})</div>
-            <div className="space-y-2 max-h-32 overflow-y-auto">
-              {/* Current User */}
-              <div className="flex items-center space-x-2 text-sm">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span className="text-white">{player.name} (You)</span>
+          {!isVideoOff ? (
+            <div className="aspect-video bg-gray-800 rounded-lg flex items-center justify-center border-2 border-blue-500">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <span className="text-white font-bold text-2xl">{player.name.charAt(0).toUpperCase()}</span>
+                </div>
+                <p className="text-white text-sm">Camera Active</p>
+                <p className="text-gray-400 text-xs">{player.name}</p>
               </div>
-
-              {/* Other Users */}
-              {connectedUsers
-                .filter((user) => user.userId !== "current-user")
-                .map((user) => (
-                  <div key={user.userId} className="flex items-center space-x-2 text-sm">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-gray-300">
-                      {user.displayName || user.name || `User ${user.userId.slice(0, 6)}`}
-                    </span>
-                  </div>
-                ))}
             </div>
-          </div>
-
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
-              <span className="text-white text-xl">👤</span>
+          ) : (
+            <div className="aspect-video bg-gray-800 rounded-lg flex items-center justify-center border border-gray-600">
+              <div className="text-center">
+                <svg
+                  className="w-12 h-12 text-gray-500 mx-auto mb-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
+                <p className="text-gray-400 text-sm">Camera Off</p>
+              </div>
             </div>
-            <div className="text-red-500">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Floating Bottom Left Chat Interface */}
+      {/* Users Modal */}
+      {showUsersModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 rounded-xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-hidden border border-gray-700">
+            <div className="flex items-center justify-between p-6 border-b border-gray-700 bg-gray-800">
+              <h2 className="text-xl font-bold text-white">Room Users ({userCount})</h2>
+              <button
+                onClick={() => setShowUsersModal(false)}
+                className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-700 rounded-lg"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <div className="space-y-3">
+                {/* Current User */}
+                <div className="flex items-center space-x-3 p-3 bg-red-900/20 rounded-lg border border-red-500/30">
+                  <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center">
+                    <span className="text-white font-bold">{player.name.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-white font-medium">{player.name}</p>
+                    <p className="text-red-400 text-sm">
+                      You • Position: ({player.row}, {player.col})
+                    </p>
+                  </div>
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                </div>
+
+                {/* Other Users */}
+                {connectedUsers
+                  .filter((user) => user.userId !== "current-user")
+                  .map((user, index) => {
+                    const colors = [
+                      "from-blue-500 to-blue-600",
+                      "from-green-500 to-green-600",
+                      "from-purple-500 to-purple-600",
+                      "from-yellow-500 to-yellow-600",
+                      "from-pink-500 to-pink-600",
+                      "from-indigo-500 to-indigo-600",
+                    ]
+                    const colorIndex = index % colors.length
+                    const displayName = user.displayName || user.name || `User ${user.userId.slice(0, 6)}`
+
+                    return (
+                      <div key={user.userId} className="flex items-center space-x-3 p-3 bg-gray-800 rounded-lg">
+                        <div
+                          className={`w-10 h-10 bg-gradient-to-br ${colors[colorIndex]} rounded-full flex items-center justify-center`}
+                        >
+                          <span className="text-white font-bold">{displayName.charAt(0).toUpperCase()}</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-white font-medium">{displayName}</p>
+                          <p className="text-gray-400 text-sm">
+                            Position: ({user.x}, {user.y})
+                          </p>
+                        </div>
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      </div>
+                    )
+                  })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chat Interface - Bottom Left */}
       <div className="absolute bottom-20 left-4 z-20">
-        <div className="bg-black bg-opacity-80 rounded-lg p-4 backdrop-blur-sm max-w-md">
-          {/* Chat Header */}
-          <div className="text-white text-sm font-medium mb-2 flex items-center justify-between">
+        <div className="bg-black bg-opacity-90 rounded-xl p-4 backdrop-blur-sm max-w-md shadow-lg border border-white/10">
+          <div className="text-white text-sm font-medium mb-3 flex items-center justify-between">
             <span>Chat - {space.name}</span>
             <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}></div>
           </div>
 
-          {/* Chat Tabs */}
           <div className="flex mb-3">
             <button
               onClick={() => setChatTab("All")}
-              className={`px-4 py-2 rounded-l-lg ${
-                chatTab === "All" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300"
+              className={`px-4 py-2 rounded-l-lg transition-colors ${
+                chatTab === "All" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"
               }`}
             >
               All
             </button>
             <button
               onClick={() => setChatTab("Private")}
-              className={`px-4 py-2 rounded-r-lg ${
-                chatTab === "Private" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300"
+              className={`px-4 py-2 rounded-r-lg transition-colors ${
+                chatTab === "Private" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"
               }`}
             >
               🔒 Private
             </button>
           </div>
 
-          {/* Chat Input */}
           <form onSubmit={handleChatSubmit} className="flex items-center space-x-2">
             <input
               type="text"
               value={chatMessage}
               onChange={(e) => setChatMessage(e.target.value)}
-              placeholder="Please enter your chat"
+              placeholder="Type your message..."
               className="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
               disabled={!isConnected}
             />
             <button
               type="submit"
-              className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 disabled:opacity-50"
+              className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
               disabled={!isConnected}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -523,12 +582,14 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
         </div>
       </div>
 
-      {/* Floating Bottom Center Control Bar */}
+      {/* Control Bar - Bottom Center */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20">
-        <div className="flex items-center space-x-4 bg-black bg-opacity-80 rounded-full px-6 py-3 backdrop-blur-sm">
+        <div className="flex items-center space-x-4 bg-black bg-opacity-90 rounded-full px-6 py-3 backdrop-blur-sm shadow-lg border border-white/10">
           <button
             onClick={() => setIsMuted(!isMuted)}
-            className={`p-2 rounded-full ${isMuted ? "bg-red-500 text-white" : "bg-gray-600 text-gray-300"}`}
+            className={`p-3 rounded-full transition-all duration-200 ${
+              isMuted ? "bg-red-500 text-white hover:bg-red-600" : "bg-gray-600 text-gray-300 hover:bg-gray-500"
+            }`}
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               {isMuted ? (
@@ -549,14 +610,16 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
 
           <button
             onClick={() => setIsVideoOff(!isVideoOff)}
-            className={`p-2 rounded-full ${isVideoOff ? "bg-red-500 text-white" : "bg-gray-600 text-gray-300"}`}
+            className={`p-3 rounded-full transition-all duration-200 ${
+              isVideoOff ? "bg-red-500 text-white hover:bg-red-600" : "bg-gray-600 text-gray-300 hover:bg-gray-500"
+            }`}
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
             </svg>
           </button>
 
-          <button className="p-2 rounded-full bg-gray-600 text-gray-300 hover:bg-gray-500">
+          <button className="p-3 rounded-full bg-gray-600 text-gray-300 hover:bg-gray-500 transition-all duration-200">
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path
                 fillRule="evenodd"
@@ -566,13 +629,13 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
             </svg>
           </button>
 
-          <button className="p-2 rounded-full bg-gray-600 text-gray-300 hover:bg-gray-500">
+          <button className="p-3 rounded-full bg-gray-600 text-gray-300 hover:bg-gray-500 transition-all duration-200">
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
             </svg>
           </button>
 
-          <button className="p-2 rounded-full bg-gray-600 text-gray-300 hover:bg-gray-500">
+          <button className="p-3 rounded-full bg-gray-600 text-gray-300 hover:bg-gray-500 transition-all duration-200">
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path
                 fillRule="evenodd"
@@ -586,10 +649,10 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
 
       {/* Minimap - Bottom Right */}
       <div className="absolute bottom-4 right-4 z-20">
-        <div className="bg-black bg-opacity-90 rounded-lg p-3 backdrop-blur-sm">
+        <div className="bg-black bg-opacity-90 rounded-xl p-3 backdrop-blur-sm shadow-lg border border-white/10">
           <div className="text-white text-xs font-medium mb-2 text-center">Map</div>
           <div
-            className="border border-gray-600 rounded"
+            className="border border-gray-600 rounded-lg overflow-hidden"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(50, 3px)",
@@ -610,7 +673,6 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
                   height: "3px",
                 }}
               >
-                {/* Current Player */}
                 {cell.isCurrentPlayer && (
                   <div
                     className="absolute inset-0 bg-red-500 rounded-full border border-white"
@@ -623,7 +685,6 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
                   />
                 )}
 
-                {/* Other Users */}
                 {cell.hasOtherUsers && (
                   <div
                     className="absolute inset-0 bg-green-500 rounded-full border border-white"
