@@ -4,6 +4,10 @@ import SignIn from "../pages/SignIn"
 import SignUp from "../pages/SignUp"
 import Space from "../pages/Space"
 import TestGrid from "../pages/TestGrid"
+import Friends from "../pages/Friends"
+import Profile from "../pages/Profile"
+import Settings from "../pages/Settings"
+import Analytics from "../pages/Analytics"
 import ProtectedRoute from "../components/ProtecedRoutes"
 
 const AppRoutes = () => {
@@ -18,6 +22,38 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Space />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/friends"
+        element={
+          <ProtectedRoute>
+            <Friends />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/analytics"
+        element={
+          <ProtectedRoute>
+            <Analytics />
           </ProtectedRoute>
         }
       />
