@@ -10,7 +10,18 @@ export interface UserPosition {
 }
 
 export interface WebSocketMessage {
-  type: "MOVE" | "POSITION_UPDATE" | "USER_JOINED" | "USER_LEFT" | "INITIAL_USERS" | "ERROR" | "INVALID_MOVE"
+  type:
+    | "MOVE"
+    | "POSITION_UPDATE"
+    | "USER_JOINED"
+    | "USER_LEFT"
+    | "INITIAL_USERS"
+    | "ERROR"
+    | "INVALID_MOVE"
+    | "offer"
+    | "answer"
+    | "candidate"
+    | "call_ended"
   userId?: string
   x?: number
   y?: number
@@ -19,6 +30,15 @@ export interface WebSocketMessage {
   message?: string
   name?: string
   displayName?: string
+  // WebRTC fields
+  targetId?: string
+  from?: string
+  offer?: RTCSessionDescriptionInit
+  answer?: RTCSessionDescriptionInit
+  candidate?: RTCIceCandidateInit
+  callType?: "audio" | "video"
+  fromDisplayName?: string
+  reason?: string
 }
 
 export class WebSocketService {
@@ -37,6 +57,9 @@ export class WebSocketService {
   private onConnectionChange: ((connected: boolean) => void) | null = null
   private onInitialUsers: ((users: UserPosition[]) => void) | null = null
   private onError: ((message: string) => void) | null = null
+
+  // WebRTC callback
+  public onWebRTCMessage: ((message: any) => void) | null = null
 
   connect(spaceId: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
@@ -141,6 +164,12 @@ export class WebSocketService {
   private handleMessage(message: WebSocketMessage) {
     console.log("Received WebSocket message:", message)
 
+    // Handle WebRTC signaling messages (including call_ended)
+    if (["offer", "answer", "candidate", "call_ended"].includes(message.type)) {
+      this.onWebRTCMessage?.(message)
+      return
+    }
+
     switch (message.type) {
       case "INITIAL_USERS":
         if (message.users) {
@@ -212,6 +241,15 @@ export class WebSocketService {
       console.log("Sent move:", { x, y })
     } else {
       console.warn("WebSocket not connected, cannot send move")
+    }
+  }
+
+  sendWebRTCMessage(message: any) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(message))
+      console.log("Sent WebRTC message:", message)
+    } else {
+      console.warn("WebSocket not connected, cannot send WebRTC message")
     }
   }
 

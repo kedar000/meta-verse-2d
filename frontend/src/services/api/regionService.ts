@@ -10,11 +10,20 @@ export interface RegionUser {
   updatedAt: string
   lastMovedAt: string
   lastUpdatedAt: string
-  // Optional fields that might come from user profile
+  // User profile fields that should come from the API
   displayName?: string
   email?: string
+  name?: string
   isOnline?: boolean
   lastSeen?: string
+  // User object if populated by backend
+  user?: {
+    id: string
+    email: string
+    displayName: string
+    createdAt: string
+    updatedAt: string
+  }
 }
 
 export interface GetRegionUsersResponse {

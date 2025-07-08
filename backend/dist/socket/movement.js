@@ -35,7 +35,6 @@ function startWebSocket() {
             const userId = decoded.id;
             ws.userId = userId;
             connectedUsers.set(userId, ws);
-            // ✅ Fetch user's displayName
             const user = yield prisma.user.findUnique({
                 where: { id: userId },
                 select: { displayName: true }
@@ -56,10 +55,8 @@ function startWebSocket() {
                     lastMovedAt: now
                 }
             });
-            console.log(`Initial position added: x=${initialX}, y=${initialY}`);
-            if (typeof spaceId === "undefined" || spaceId === null) {
+            if (!spaceId)
                 return ws.close();
-            }
             yield prisma.spaceMember.create({
                 data: {
                     id: (0, uuid_1.v4)(),
@@ -68,50 +65,93 @@ function startWebSocket() {
                 }
             });
             console.log(`User ${userId} (${displayName}) added to space ${spaceId}`);
+            // 🧠 Handle incoming messages
             ws.on('message', (raw) => __awaiter(this, void 0, void 0, function* () {
                 const msg = JSON.parse(raw.toString());
                 console.log("RECEIVED MESSAGE - ", msg);
-                if (msg.type === 'MOVE') {
-                    const { x, y } = msg;
-                    const validMove = (0, grid1_1.default)(x, y);
-                    if (validMove) {
-                        const now = new Date();
-                        yield prisma.userPosition.upsert({
-                            where: { userId },
-                            update: {
-                                x,
-                                y,
-                                spaceId,
-                                lastUpdatedAt: now,
-                                lastMovedAt: now
-                            },
-                            create: {
-                                userId,
-                                x,
-                                y,
-                                spaceId,
-                                lastUpdatedAt: now,
-                                lastMovedAt: now
-                            }
-                        });
-                        // ✅ Broadcast updated position including displayName
-                        connectedUsers.forEach((clientWs, id) => {
-                            if (id !== userId) {
-                                clientWs.send(JSON.stringify({
-                                    type: 'POSITION_UPDATE',
-                                    userId,
-                                    displayName: ws.displayName,
-                                    x,
-                                    y,
-                                    spaceId,
-                                }));
-                            }
-                        });
-                        console.log(`MOVE: ${userId} (${ws.displayName}) -> x:${x}, y:${y}`);
+                switch (msg.type) {
+                    case 'MOVE': {
+                        const { x, y } = msg;
+                        const validMove = (0, grid1_1.default)(x, y);
+                        if (validMove) {
+                            const now = new Date();
+                            yield prisma.userPosition.upsert({
+                                where: { userId },
+                                update: { x, y, spaceId, lastUpdatedAt: now, lastMovedAt: now },
+                                create: { userId, x, y, spaceId, lastUpdatedAt: now, lastMovedAt: now }
+                            });
+                            connectedUsers.forEach((clientWs, id) => {
+                                if (id !== userId) {
+                                    clientWs.send(JSON.stringify({
+                                        type: 'POSITION_UPDATE',
+                                        userId,
+                                        displayName,
+                                        x,
+                                        y,
+                                        spaceId,
+                                    }));
+                                }
+                            });
+                            console.log(`MOVE: ${userId} (${displayName}) -> x:${x}, y:${y}`);
+                        }
+                        else {
+                            console.error("Invalid Move");
+                        }
+                        break;
                     }
-                    else {
-                        console.error("Invalid Move");
+                    // 📡 WebRTC Signaling - Offer
+                    case 'offer': {
+                        const { targetId, offer } = msg;
+                        const targetSocket = connectedUsers.get(targetId);
+                        console.log(`[WebRTC] Offer from ${userId} → ${targetId}`);
+                        if (targetSocket) {
+                            targetSocket.send(JSON.stringify({
+                                type: 'offer',
+                                from: userId,
+                                offer,
+                            }));
+                        }
+                        else {
+                            console.warn(`[WebRTC] Target user ${targetId} not connected (offer)`);
+                        }
+                        break;
                     }
+                    // 📡 WebRTC Signaling - Answer
+                    case 'answer': {
+                        const { targetId, answer } = msg;
+                        const targetSocket = connectedUsers.get(targetId);
+                        console.log(`[WebRTC] Answer from ${userId} → ${targetId}`);
+                        if (targetSocket) {
+                            targetSocket.send(JSON.stringify({
+                                type: 'answer',
+                                from: userId,
+                                answer,
+                            }));
+                        }
+                        else {
+                            console.warn(`[WebRTC] Target user ${targetId} not connected (answer)`);
+                        }
+                        break;
+                    }
+                    // 📡 WebRTC Signaling - ICE Candidate
+                    case 'candidate': {
+                        const { targetId, candidate } = msg;
+                        const targetSocket = connectedUsers.get(targetId);
+                        console.log(`[WebRTC] Candidate from ${userId} → ${targetId}`);
+                        if (targetSocket) {
+                            targetSocket.send(JSON.stringify({
+                                type: 'candidate',
+                                from: userId,
+                                candidate,
+                            }));
+                        }
+                        else {
+                            console.warn(`[WebRTC] Target user ${targetId} not connected (candidate)`);
+                        }
+                        break;
+                    }
+                    default:
+                        console.warn("Unknown message type:", msg.type);
                 }
             }));
             ws.on('close', () => __awaiter(this, void 0, void 0, function* () {
@@ -120,8 +160,8 @@ function startWebSocket() {
                     yield prisma.spaceMember.delete({
                         where: {
                             userId_spaceId: {
-                                userId: userId,
-                                spaceId: spaceId
+                                userId,
+                                spaceId
                             }
                         }
                     });

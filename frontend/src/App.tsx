@@ -1,58 +1,38 @@
 "use client"
 
-import { BrowserRouter as Router, useLocation } from "react-router-dom"
+import { BrowserRouter as Router } from "react-router-dom"
+import { useAuth } from "./hooks/useAuth"
 import AppRoutes from "./routes/AppRoutes"
-import Dashboard from "./components/Dashboard"
-import { tokenService } from "./services/api/tokenService"
-import { useEffect, useState } from "react"
+import Navbar from "./components/Navbar"
+import { useLocation } from "react-router-dom"
 
-const AppContent = () => {
+function AppContent() {
+  const { user, loading } = useAuth()
   const location = useLocation()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
 
-  // Check authentication status
-  useEffect(() => {
-    const checkAuth = () => {
-      const authenticated = tokenService.isAuthenticated()
-      setIsAuthenticated(authenticated)
-      setIsLoading(false)
-    }
+  // Hide navbar on test-grid route (space view)
+  const hideNavbar = location.pathname === "/test-grid"
 
-    checkAuth()
-
-    // Listen for storage changes (when user logs in/out)
-    window.addEventListener("storage", checkAuth)
-
-    return () => {
-      window.removeEventListener("storage", checkAuth)
-    }
-  }, [])
-
-  // Pages that should not show the dashboard
-  const noDashboardPages = ["/test-grid", "/signin", "/signup"]
-  const shouldShowDashboard = isAuthenticated && !noDashboardPages.includes(location.pathname)
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
       </div>
     )
   }
 
-  if (shouldShowDashboard) {
-    return (
-      <Dashboard>
-        <AppRoutes />
-      </Dashboard>
-    )
-  }
-
-  return <AppRoutes />
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {!hideNavbar && user && <Navbar />}
+      <AppRoutes />
+    </div>
+  )
 }
 
-const App = () => {
+function App() {
   return (
     <Router>
       <AppContent />
