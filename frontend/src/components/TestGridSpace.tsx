@@ -3,7 +3,7 @@
 import type React from "react"
 
 import type { ReactElement } from "react"
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { grid } from "../data/mapData"
 import type { Space } from "../services/api"
 import { useWebSocketSpace } from "../hooks/useWebSocketSpace"
@@ -53,8 +53,9 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
   const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>("new")
 
   // Video refs for displaying streams
-  const localVideoRef = useRef<HTMLVideoElement>(null)
-  const remoteVideoRef = useRef<HTMLVideoElement>(null)
+  // Remove these lines:
+  // const localVideoRef = useRef<HTMLVideoElement>(null)
+  // const remoteVideoRef = useRef<HTMLVideoElement>(null)
 
   // WebSocket connection - memoize the currentUser object to prevent unnecessary re-renders
   const currentUser = {
@@ -100,20 +101,12 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
     })
 
     webrtcService.onCallWasEnded(() => {
-      console.log("[TestGridSpace] Global call ended - resetting UI state")
+      console.log("[TestGridSpace] Global call ended")
       setIncomingCall(null)
       setCurrentCall(null)
       setIsCallActive(false)
       setIsCallMuted(false)
       setIsCallVideoOff(false)
-
-      // CRITICAL: Clear video elements when call ends
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = null
-      }
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = null
-      }
     })
 
     webrtcService.onConnectionStateChanged((state) => {
@@ -124,17 +117,11 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
     // Handle local stream for UI display
     webrtcService.onLocalStreamReceived((stream) => {
       console.log("[TestGridSpace] Local stream received")
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream
-      }
     })
 
     // Handle remote stream for UI display
     webrtcService.onRemoteStreamReceived((stream) => {
       console.log("[TestGridSpace] Remote stream received")
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = stream
-      }
     })
 
     // Cleanup function
@@ -659,7 +646,7 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
           {/* Local Video Stream */}
           <div className="aspect-video bg-gray-800 rounded-lg overflow-hidden border-2 border-blue-500 mb-2">
             {!isVideoOff && (isCallActive || webrtcService.getLocalStream()) ? (
-              <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+              <video autoPlay playsInline muted className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <div className="text-center">
@@ -677,7 +664,7 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
           {isCallActive && (
             <div className="aspect-video bg-gray-800 rounded-lg overflow-hidden border-2 border-green-500">
               {webrtcService.getRemoteStream() ? (
-                <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                <video autoPlay playsInline className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <div className="text-center">
@@ -751,354 +738,274 @@ const TestGridSpace = ({ space, onExit }: TestGridSpaceProps): ReactElement => {
                             >
                               <span className="text-white font-bold">{displayName.charAt(0).toUpperCase()}</span>
                             </div>
-                            <div>
+                            <div className="flex-1">
                               <p className="text-white font-medium">{displayName}</p>
                               <p className="text-gray-400 text-sm">
-                                Position: ({user.y}, {user.x})
+                                Position: ({user.x}, {user.y})
                               </p>
                             </div>
                           </div>
-                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                        </div>
+                          <div className="flex items-center space-x-2">
+                            {/* Audio Call Button */}
+                            <button
+                              onClick={() => initiateCallToUser(user.userId, "audio", displayName)}
+                              disabled={webrtcService.isInCall()}
+                              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors"
+                              title={`Audio call ${displayName}`}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                />
+                              </svg>
+                            </button>
 
-                        {/* Call Buttons */}
-                        <div className="flex space-x-2 mt-3">
-                          <button
-                            onClick={() => {
-                              setShowUsersModal(false)
-                              initiateCallToUser(user.userId, "audio", displayName)
-                            }}
-                            disabled={webrtcService.isInCall()}
-                            className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-3 rounded-lg transition-colors text-sm flex items-center justify-center space-x-2"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                              />
-                            </svg>
-                            <span>Audio</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setShowUsersModal(false)
-                              initiateCallToUser(user.userId, "video", displayName)
-                            }}
-                            disabled={webrtcService.isInCall()}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-3 rounded-lg transition-colors text-sm flex items-center justify-center space-x-2"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                              />
-                            </svg>
-                            <span>Video</span>
-                          </button>
+                            {/* Video Call Button */}
+                            <button
+                              onClick={() => initiateCallToUser(user.userId, "video", displayName)}
+                              disabled={webrtcService.isInCall()}
+                              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors"
+                              title={`Video call ${displayName}`}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                />
+                              </svg>
+                            </button>
+
+                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          </div>
                         </div>
                       </div>
                     )
                   })}
-
-                {connectedUsers.filter((user) => user.userId !== "current-user").length === 0 && (
-                  <div className="text-center py-8">
-                    <div className="text-gray-400 text-lg mb-2">👥</div>
-                    <p className="text-gray-400">No other users in this space</p>
-                    <p className="text-gray-500 text-sm mt-1">Invite friends to join!</p>
-                  </div>
-                )}
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Chat Section - Bottom Left */}
-      <div className="absolute bottom-4 left-4 z-20 w-80">
-        <div className="bg-black bg-opacity-90 rounded-xl backdrop-blur-sm shadow-lg border border-white/10">
-          {/* Chat Header */}
-          <div className="p-4 border-b border-gray-700">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-white font-semibold">Chat - {space.name}</h3>
-              <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}></div>
-            </div>
-
-            {/* Chat Tabs */}
-            <div className="flex space-x-1">
-              <button
-                onClick={() => setChatTab("All")}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  chatTab === "All" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setChatTab("Private")}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1 ${
-                  chatTab === "Private" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                }`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-                <span>Private</span>
-              </button>
-            </div>
+      {/* Chat Interface - Bottom Left */}
+      <div className="absolute bottom-20 left-4 z-20">
+        <div className="bg-black bg-opacity-90 rounded-xl p-4 backdrop-blur-sm max-w-md shadow-lg border border-white/10">
+          <div className="text-white text-sm font-medium mb-3 flex items-center justify-between">
+            <span>Chat - {space.name}</span>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}></div>
           </div>
 
-          {/* Chat Messages Area */}
-          <div className="h-32 p-4 overflow-y-auto">
-            <div className="text-gray-400 text-sm text-center">
-              <p>💬 Chat coming soon!</p>
-              <p className="text-xs mt-1">Connect with other users in {space.name}</p>
-            </div>
+          <div className="flex mb-3">
+            <button
+              onClick={() => setChatTab("All")}
+              className={`px-4 py-2 rounded-l-lg transition-colors ${
+                chatTab === "All" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setChatTab("Private")}
+              className={`px-4 py-2 rounded-r-lg transition-colors ${
+                chatTab === "Private" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+              }`}
+            >
+              🔒 Private
+            </button>
           </div>
 
-          {/* Chat Input */}
-          <div className="p-4 border-t border-gray-700">
-            <form onSubmit={handleChatSubmit} className="flex space-x-2">
-              <input
-                type="text"
-                value={chatMessage}
-                onChange={(e) => setChatMessage(e.target.value)}
-                placeholder="Type your message..."
-                className="flex-1 bg-gray-800 text-white px-3 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none text-sm"
-              />
-              <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                  />
-                </svg>
-              </button>
-            </form>
-          </div>
+          <form onSubmit={handleChatSubmit} className="flex items-center space-x-2">
+            <input
+              type="text"
+              value={chatMessage}
+              onChange={(e) => setChatMessage(e.target.value)}
+              placeholder="Type your message..."
+              className="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+              disabled={!isConnected}
+            />
+            <button
+              type="submit"
+              className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              disabled={!isConnected}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                />
+              </svg>
+            </button>
+          </form>
         </div>
       </div>
 
-      {/* Bottom Controls */}
+      {/* Control Bar - Bottom Center - Now functional */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20">
-        <div className="bg-black bg-opacity-90 rounded-full px-6 py-3 backdrop-blur-sm shadow-lg border border-white/10">
-          <div className="flex items-center space-x-4">
-            {/* Mute Button */}
-            <button
-              onClick={handleToggleMute}
-              className={`p-3 rounded-full transition-all duration-200 ${
-                isMuted || isCallMuted
-                  ? "bg-red-600 hover:bg-red-700 text-white"
-                  : "bg-gray-700 hover:bg-gray-600 text-gray-300"
-              }`}
-              title={isMuted || isCallMuted ? "Unmute" : "Mute"}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {isMuted || isCallMuted ? (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
-                  />
-                ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
-                  />
-                )}
-              </svg>
-            </button>
-
-            {/* Video Button */}
-            <button
-              onClick={handleToggleVideo}
-              className={`p-3 rounded-full transition-all duration-200 ${
-                isVideoOff || isCallVideoOff
-                  ? "bg-red-600 hover:bg-red-700 text-white"
-                  : "bg-gray-700 hover:bg-gray-600 text-gray-300"
-              }`}
-              title={isVideoOff || isCallVideoOff ? "Turn on camera" : "Turn off camera"}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {isVideoOff || isCallVideoOff ? (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18 21l-4.5-4.5m0 0L8 12l4.5 4.5zm0 0L16.5 21M3 3l3.5 3.5M21 21l-3.5-3.5"
-                  />
-                ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                )}
-              </svg>
-            </button>
-
-            {/* Grid Button */}
-            <button className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-300 transition-all duration-200">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex items-center space-x-4 bg-black bg-opacity-90 rounded-full px-6 py-3 backdrop-blur-sm shadow-lg border border-white/10">
+          <button
+            onClick={handleToggleMute}
+            className={`p-3 rounded-full transition-all duration-200 ${
+              isMuted || isCallMuted
+                ? "bg-red-500 text-white hover:bg-red-600"
+                : "bg-gray-600 text-gray-300 hover:bg-gray-500"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              {isMuted || isCallMuted ? (
                 <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                  fillRule="evenodd"
+                  d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z"
+                  clipRule="evenodd"
                 />
-              </svg>
-            </button>
-
-            {/* People Button */}
-            <button
-              onClick={() => setShowUsersModal(true)}
-              className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-300 transition-all duration-200"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              ) : (
                 <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
+                  fillRule="evenodd"
+                  d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.793L4.617 14H2a1 1 0 01-1-1V7a1 1 0 011-1h2.617l3.766-2.793a1 1 0 011.617.793z"
+                  clipRule="evenodd"
                 />
-              </svg>
-            </button>
+              )}
+            </svg>
+          </button>
 
-            {/* Settings Button */}
-            <button className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-300 transition-all duration-200">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-            </button>
+          <button
+            onClick={handleToggleVideo}
+            className={`p-3 rounded-full transition-all duration-200 ${
+              isVideoOff || isCallVideoOff
+                ? "bg-red-500 text-white hover:bg-red-600"
+                : "bg-gray-600 text-gray-300 hover:bg-gray-500"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+            </svg>
+          </button>
 
-            {/* End Call Button (only show if in call) */}
-            {isCallActive && (
-              <button
-                onClick={handleEndCall}
-                className="p-3 rounded-full bg-red-600 hover:bg-red-700 text-white transition-all duration-200"
-                title="End Call"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 3l18 18"
-                  />
-                </svg>
-              </button>
-            )}
-          </div>
+          <button className="p-3 rounded-full bg-gray-600 text-gray-300 hover:bg-gray-500 transition-all duration-200">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 01-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 111.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 111.414-1.414L15 13.586V12a1 1 0 011-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+
+          <button className="p-3 rounded-full bg-gray-600 text-gray-300 hover:bg-gray-500 transition-all duration-200">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+            </svg>
+          </button>
+
+          <button className="p-3 rounded-full bg-gray-600 text-gray-300 hover:bg-gray-500 transition-all duration-200">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zM9 7a1 1 0 11-2 0 1 1 0 012 0zm.5 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
         </div>
       </div>
 
       {/* Minimap - Bottom Right */}
       <div className="absolute bottom-4 right-4 z-20">
-        <div className="bg-black bg-opacity-90 rounded-xl p-4 backdrop-blur-sm shadow-lg border border-white/10">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-white font-semibold text-sm">Map</h3>
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span className="text-xs text-gray-400">You</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-xs text-gray-400">Others</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-xs text-gray-400">View</span>
-              </div>
-            </div>
-          </div>
-
+        <div className="bg-black bg-opacity-90 rounded-xl p-3 backdrop-blur-sm shadow-lg border border-white/10">
+          <div className="text-white text-xs font-medium mb-2 text-center">Map</div>
           <div
-            className="grid gap-0 border border-gray-600 rounded"
+            className="border border-gray-600 rounded-lg overflow-hidden"
             style={{
-              gridTemplateColumns: "repeat(50, 1fr)",
-              width: "200px",
-              height: "200px",
+              display: "grid",
+              gridTemplateColumns: "repeat(50, 3px)",
+              gridTemplateRows: "repeat(50, 3px)",
+              gap: "0px",
+              width: "150px",
+              height: "150px",
             }}
           >
             {getMinimapData().map((cell) => (
               <div
                 key={`minimap-${cell.row}-${cell.col}`}
-                className={`
-                  ${cell.cellType === "#" ? "bg-gray-800" : "bg-gray-600"}
-                  ${cell.isCurrentPlayer ? "bg-red-500" : ""}
-                  ${cell.hasOtherUsers && !cell.isCurrentPlayer ? "bg-blue-500" : ""}
-                  ${cell.isInViewport ? "ring-1 ring-green-400" : ""}
-                `}
+                className={`relative ${
+                  cell.cellType === "#" ? "bg-gray-800" : cell.isInViewport ? "bg-blue-300" : "bg-gray-300"
+                }`}
                 style={{
-                  width: "4px",
-                  height: "4px",
+                  width: "3px",
+                  height: "3px",
                 }}
-              />
+              >
+                {cell.isCurrentPlayer && (
+                  <div
+                    className="absolute inset-0 bg-red-500 rounded-full border border-white"
+                    style={{
+                      width: "3px",
+                      height: "3px",
+                      transform: "scale(1.5)",
+                      transformOrigin: "center",
+                    }}
+                  />
+                )}
+
+                {cell.hasOtherUsers && (
+                  <div
+                    className="absolute inset-0 bg-green-500 rounded-full border border-white"
+                    style={{
+                      width: "3px",
+                      height: "3px",
+                      transform: "scale(1.2)",
+                      transformOrigin: "center",
+                    }}
+                  />
+                )}
+              </div>
             ))}
+          </div>
+          <div className="text-white text-xs mt-2 text-center opacity-75">
+            <span className="inline-block w-2 h-2 bg-red-500 rounded-full mr-1"></span>You
+            <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-1 ml-2"></span>Others
+            <span className="inline-block w-2 h-2 bg-blue-300 rounded-full mr-1 ml-2"></span>View
           </div>
         </div>
       </div>
 
-      {/* Region Folks Modal */}
+      {/* Region Folks Modal - Pass call functions as props */}
       <RegionFolksModal
         isOpen={isRegionModalOpen}
         onClose={() => setIsRegionModalOpen(false)}
+        currentPosition={{ x: player.col, y: player.row }}
         onInitiateCall={initiateCallToUser}
       />
 
-      {/* Global Call Notification Modal */}
-      {incomingCall && (
-        <CallNotificationModal
-          incomingCall={incomingCall}
-          onAccept={handleAcceptCall}
-          onReject={handleRejectCall}
-          onDismiss={handleDismissCall}
-        />
-      )}
+      {/* GLOBAL Call Notification Modal - This will show regardless of which modal is open */}
+      <CallNotificationModal
+        incomingCall={incomingCall}
+        onAccept={handleAcceptCall}
+        onReject={handleRejectCall}
+        onDismiss={handleDismissCall}
+      />
 
-      {/* Global Call Modal */}
+      {/* GLOBAL Active Call Modal - This will show regardless of which modal is open */}
       {isCallActive && currentCall && (
         <CallModal
+          isOpen={isCallActive}
           callType={currentCall.type}
-          remoteUser={currentCall.remoteUser}
           isIncoming={currentCall.isIncoming}
-          isMuted={isCallMuted}
-          isVideoOff={isCallVideoOff}
+          remoteUserName={currentCall.remoteUser}
+          localStream={webrtcService.getLocalStream()}
+          remoteStream={webrtcService.getRemoteStream()}
           connectionState={connectionState}
           onEndCall={handleEndCall}
           onToggleMute={handleToggleCallMute}
           onToggleVideo={handleToggleCallVideo}
-          localVideoRef={localVideoRef}
-          remoteVideoRef={remoteVideoRef}
+          isMuted={isCallMuted}
+          isVideoOff={isCallVideoOff}
         />
       )}
     </div>

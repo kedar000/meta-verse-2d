@@ -37,6 +37,8 @@ export const useAuth = () => {
   return {
     isAuthenticated,
     isLoading,
+    user: isAuthenticated ? { authenticated: true } : null, // Add user property
+    loading: isLoading, // Add loading property as alias
     login,
     logout,
   }

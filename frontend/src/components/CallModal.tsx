@@ -1,158 +1,225 @@
 "use client"
 
 import type React from "react"
-import type { RefObject } from "react"
+import { useEffect, useRef } from "react"
 
 interface CallModalProps {
+  isOpen: boolean
   callType: "audio" | "video"
-  remoteUser: string
   isIncoming: boolean
-  isMuted: boolean
-  isVideoOff: boolean
+  remoteUserName: string
+  localStream: MediaStream | null
+  remoteStream: MediaStream | null
   connectionState: RTCPeerConnectionState
   onEndCall: () => void
   onToggleMute: () => void
   onToggleVideo: () => void
-  localVideoRef: RefObject<HTMLVideoElement>
-  remoteVideoRef: RefObject<HTMLVideoElement>
+  isMuted: boolean
+  isVideoOff: boolean
 }
 
 const CallModal: React.FC<CallModalProps> = ({
+  isOpen,
   callType,
-  remoteUser,
   isIncoming,
-  isMuted,
-  isVideoOff,
+  remoteUserName,
+  localStream,
+  remoteStream,
   connectionState,
   onEndCall,
   onToggleMute,
   onToggleVideo,
-  localVideoRef,
-  remoteVideoRef,
+  isMuted,
+  isVideoOff,
 }) => {
-  const getConnectionStatusText = () => {
-    switch (connectionState) {
-      case "connecting":
-        return "Connecting..."
-      case "connected":
-        return "Connected"
-      case "disconnected":
-        return "Disconnected"
-      case "failed":
-        return "Connection Failed"
-      case "closed":
-        return "Call Ended"
-      default:
-        return "Connecting..."
+  const localVideoRef = useRef<HTMLVideoElement>(null)
+  const remoteVideoRef = useRef<HTMLVideoElement | HTMLAudioElement>(null)
+
+  // Set up local video stream
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      console.log("[CallModal] Setting local stream to video element")
+      localVideoRef.current.srcObject = localStream
+
+      // Ensure video plays
+      localVideoRef.current.play().catch((error) => {
+        console.error("[CallModal] Failed to play local video:", error)
+      })
     }
-  }
+  }, [localStream])
+
+  // Set up remote video stream
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      console.log("[CallModal] Setting remote stream to video element")
+      remoteVideoRef.current.srcObject = remoteStream
+
+      // Ensure video plays
+      remoteVideoRef.current.play().catch((error) => {
+        console.error("[CallModal] Failed to play remote video:", error)
+      })
+    }
+  }, [remoteStream])
+
+  // Debug logging
+  useEffect(() => {
+    console.log("[CallModal] Props updated:", {
+      isOpen,
+      callType,
+      hasLocalStream: !!localStream,
+      hasRemoteStream: !!remoteStream,
+      connectionState,
+      localStreamTracks: localStream?.getTracks().map((t) => ({ kind: t.kind, enabled: t.enabled })),
+      remoteStreamTracks: remoteStream?.getTracks().map((t) => ({ kind: t.kind, enabled: t.enabled })),
+    })
+  }, [isOpen, callType, localStream, remoteStream, connectionState])
+
+  if (!isOpen) return null
 
   const getConnectionStatusColor = () => {
     switch (connectionState) {
       case "connected":
-        return "text-green-400"
+        return "bg-green-500"
       case "connecting":
-        return "text-yellow-400"
+        return "bg-yellow-500"
       case "disconnected":
       case "failed":
-      case "closed":
-        return "text-red-400"
+        return "bg-red-500"
       default:
-        return "text-gray-400"
+        return "bg-gray-500"
+    }
+  }
+
+  const getConnectionStatusText = () => {
+    switch (connectionState) {
+      case "connected":
+        return "Connected"
+      case "connecting":
+        return "Connecting..."
+      case "disconnected":
+        return "Disconnected"
+      case "failed":
+        return "Connection Failed"
+      default:
+        return "Initializing..."
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-700">
+    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[70] p-4">
+      <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl h-full max-h-[90vh] overflow-hidden border border-gray-700">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700 bg-gray-800">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-xl">{remoteUser.charAt(0).toUpperCase()}</span>
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">{remoteUser}</h2>
-              <div className="flex items-center space-x-2">
-                <span className={`text-sm ${getConnectionStatusColor()}`}>{getConnectionStatusText()}</span>
-                <span className="text-gray-400 text-sm">•</span>
-                <span className="text-gray-400 text-sm capitalize">{callType} Call</span>
-                {isIncoming && <span className="text-blue-400 text-sm">• Incoming</span>}
+        <div className="bg-gray-800 p-4 border-b border-gray-700">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-lg">{remoteUserName.charAt(0).toUpperCase()}</span>
+              </div>
+              <div>
+                <h2 className="text-white font-semibold text-lg">{remoteUserName}</h2>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${getConnectionStatusColor()}`}></div>
+                  <span className="text-gray-400 text-sm">{getConnectionStatusText()}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <button
-            onClick={onEndCall}
-            className="bg-red-600 hover:bg-red-700 text-white p-3 rounded-full transition-colors"
-            title="End Call"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 3l18 18"
-              />
-            </svg>
-          </button>
+            <div className="flex items-center space-x-2">
+              <span className="text-gray-400 text-sm">{callType === "video" ? "Video Call" : "Audio Call"}</span>
+              {isIncoming && <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full">Incoming</span>}
+            </div>
+          </div>
         </div>
 
         {/* Video Content */}
-        <div className="p-6">
+        <div className="flex-1 relative bg-gray-900 h-[calc(100%-140px)]">
           {callType === "video" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              {/* Remote Video */}
-              <div className="aspect-video bg-gray-800 rounded-xl overflow-hidden border-2 border-blue-500 relative">
-                <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                <div className="absolute bottom-4 left-4 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm">
-                  {remoteUser}
-                </div>
-                {connectionState !== "connected" && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-75">
+            <>
+              {/* Remote Video (Main) */}
+              <div className="w-full h-full relative">
+                {remoteStream ? (
+                  <video
+                    ref={remoteVideoRef as React.RefObject<HTMLVideoElement>}
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-cover"
+                    onLoadedMetadata={() => console.log("[CallModal] Remote video metadata loaded")}
+                    onPlay={() => console.log("[CallModal] Remote video started playing")}
+                    onError={(e) => console.error("[CallModal] Remote video error:", e)}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-800">
                     <div className="text-center">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <span className="text-white font-bold text-2xl">{remoteUser.charAt(0).toUpperCase()}</span>
+                      <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span className="text-white font-bold text-3xl">{remoteUserName.charAt(0).toUpperCase()}</span>
                       </div>
-                      <p className="text-white text-sm">{getConnectionStatusText()}</p>
+                      <p className="text-white text-lg">{remoteUserName}</p>
+                      <p className="text-gray-400 text-sm">
+                        {connectionState === "connecting" ? "Connecting..." : "No video"}
+                      </p>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Local Video */}
-              <div className="aspect-video bg-gray-800 rounded-xl overflow-hidden border-2 border-green-500 relative">
-                {!isVideoOff ? (
-                  <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+              {/* Local Video (Picture-in-Picture) */}
+              <div className="absolute top-4 right-4 w-48 h-36 bg-gray-800 rounded-lg overflow-hidden border-2 border-gray-600">
+                {localStream && !isVideoOff ? (
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                    onLoadedMetadata={() => console.log("[CallModal] Local video metadata loaded")}
+                    onPlay={() => console.log("[CallModal] Local video started playing")}
+                    onError={(e) => console.error("[CallModal] Local video error:", e)}
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <div className="text-center">
-                      <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <span className="text-white font-bold text-2xl">Y</span>
+                      <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <span className="text-white font-bold text-lg">You</span>
                       </div>
-                      <p className="text-white text-sm">Camera Off</p>
+                      <p className="text-gray-400 text-xs">Camera Off</p>
                     </div>
                   </div>
                 )}
-                <div className="absolute bottom-4 left-4 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm">
-                  You {isVideoOff && "(Camera Off)"}
+              </div>
+            </>
+          ) : (
+            /* Audio Call Interface */
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <span className="text-white font-bold text-4xl">{remoteUserName.charAt(0).toUpperCase()}</span>
+                </div>
+                <h3 className="text-white text-2xl font-semibold mb-2">{remoteUserName}</h3>
+                <p className="text-gray-400 text-lg mb-4">Audio Call</p>
+                <div className="flex items-center justify-center space-x-2">
+                  <div className={`w-3 h-3 rounded-full ${getConnectionStatusColor()}`}></div>
+                  <span className="text-gray-400">{getConnectionStatusText()}</span>
                 </div>
               </div>
-            </div>
-          ) : (
-            /* Audio Call UI */
-            <div className="text-center py-12">
-              <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span className="text-white font-bold text-4xl">{remoteUser.charAt(0).toUpperCase()}</span>
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-2">{remoteUser}</h3>
-              <p className={`text-lg ${getConnectionStatusColor()}`}>{getConnectionStatusText()}</p>
-              <p className="text-gray-400 mt-2">Audio Call {isIncoming && "• Incoming"}</p>
+
+              {/* Hidden audio element for remote stream in audio calls */}
+              {remoteStream && (
+                <audio
+                  ref={remoteVideoRef as React.RefObject<HTMLAudioElement>}
+                  autoPlay
+                  playsInline
+                  onLoadedMetadata={() => console.log("[CallModal] Remote audio metadata loaded")}
+                  onPlay={() => console.log("[CallModal] Remote audio started playing")}
+                  onError={(e) => console.error("[CallModal] Remote audio error:", e)}
+                />
+              )}
             </div>
           )}
+        </div>
 
-          {/* Call Controls */}
-          <div className="flex items-center justify-center space-x-4">
+        {/* Controls */}
+        <div className="bg-gray-800 p-4 border-t border-gray-700">
+          <div className="flex items-center justify-center space-x-6">
             {/* Mute Button */}
             <button
               onClick={onToggleMute}
@@ -161,26 +228,24 @@ const CallModal: React.FC<CallModalProps> = ({
               }`}
               title={isMuted ? "Unmute" : "Mute"}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                 {isMuted ? (
                   <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
+                    fillRule="evenodd"
+                    d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z"
+                    clipRule="evenodd"
                   />
                 ) : (
                   <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+                    fillRule="evenodd"
+                    d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.793L4.617 14H2a1 1 0 01-1-1V7a1 1 0 011-1h2.617l3.766-2.793a1 1 0 011.617.793z"
+                    clipRule="evenodd"
                   />
                 )}
               </svg>
             </button>
 
-            {/* Video Button (only for video calls) */}
+            {/* Video Toggle Button (only for video calls) */}
             {callType === "video" && (
               <button
                 onClick={onToggleVideo}
@@ -189,22 +254,8 @@ const CallModal: React.FC<CallModalProps> = ({
                 }`}
                 title={isVideoOff ? "Turn on camera" : "Turn off camera"}
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {isVideoOff ? (
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18 21l-4.5-4.5m0 0L8 12l4.5 4.5zm0 0L16.5 21M3 3l3.5 3.5M21 21l-3.5-3.5"
-                    />
-                  ) : (
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  )}
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
                 </svg>
               </button>
             )}
@@ -212,15 +263,15 @@ const CallModal: React.FC<CallModalProps> = ({
             {/* End Call Button */}
             <button
               onClick={onEndCall}
-              className="p-4 rounded-full bg-red-600 hover:bg-red-700 text-white transition-all duration-200"
-              title="End Call"
+              className="bg-red-600 hover:bg-red-700 text-white p-4 rounded-full transition-all duration-200"
+              title="End call"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                  d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 3l1.664 1.664M21 21l-1.5-1.5m-5.485-1.242L17 17l-4-4m-6 6l-1.5-1.5M3.5 3.5l1.664 1.664"
                 />
               </svg>
             </button>

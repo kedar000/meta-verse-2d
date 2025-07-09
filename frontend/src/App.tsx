@@ -7,7 +7,7 @@ import Navbar from "./components/Navbar"
 import { useLocation } from "react-router-dom"
 
 function AppContent() {
-  const { user, loading } = useAuth()
+  const { user, loading, isAuthenticated } = useAuth()
   const location = useLocation()
 
   // Hide navbar on test-grid route (space view)
@@ -26,7 +26,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {!hideNavbar && user && <Navbar />}
+      {!hideNavbar && isAuthenticated && <Navbar />}
       <AppRoutes />
     </div>
   )
