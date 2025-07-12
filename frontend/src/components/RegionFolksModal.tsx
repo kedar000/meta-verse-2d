@@ -8,14 +8,13 @@ interface RegionFolksModalProps {
   isOpen: boolean
   onClose: () => void
   currentPosition: { x: number; y: number }
-  onInitiateCall: (targetUserId: string, callType: "audio" | "video", targetDisplayName?: string) => void
 }
 
 interface EnhancedRegionUser extends RegionUser {
   userProfile?: UserProfile
 }
 
-const RegionFolksModal = ({ isOpen, onClose, currentPosition, onInitiateCall }: RegionFolksModalProps) => {
+const RegionFolksModal = ({ isOpen, onClose, currentPosition }: RegionFolksModalProps) => {
   const [regionUsers, setRegionUsers] = useState<EnhancedRegionUser[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -83,14 +82,6 @@ const RegionFolksModal = ({ isOpen, onClose, currentPosition, onInitiateCall }: 
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const handleCall = async (user: EnhancedRegionUser, callType: "audio" | "video") => {
-    const displayName = getDisplayName(user)
-    console.log(`[RegionFolksModal] Initiating ${callType} call to user:`, displayName, user.userId)
-
-    // Use the global call function passed from TestGridSpace
-    onInitiateCall(user.userId, callType, displayName)
   }
 
   const formatLastSeen = (lastMovedAt?: string) => {
@@ -331,56 +322,6 @@ const RegionFolksModal = ({ isOpen, onClose, currentPosition, onInitiateCall }: 
                             <span>Last seen: {formatLastSeen(user.lastMovedAt)}</span>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Call Buttons */}
-                      <div className="flex items-center space-x-2">
-                        {/* Audio Call Button */}
-                        <button
-                          onClick={() => handleCall(user, "audio")}
-                          className="bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg transition-colors group"
-                          title={`Audio call ${displayName}`}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                            />
-                          </svg>
-                        </button>
-
-                        {/* Video Call Button */}
-                        <button
-                          onClick={() => handleCall(user, "video")}
-                          className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg transition-colors group"
-                          title={`Video call ${displayName}`}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                            />
-                          </svg>
-                        </button>
-
-                        {/* Message Button (placeholder) */}
-                        <button
-                          className="bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-lg transition-colors"
-                          title={`Message ${displayName}`}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                            />
-                          </svg>
-                        </button>
                       </div>
                     </div>
                   </div>

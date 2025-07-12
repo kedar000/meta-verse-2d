@@ -34,6 +34,15 @@ const Navbar = () => {
         MyApp
       </Link>
       <div className="space-x-4">
+        <Link to="/test-grid" className="hover:underline">
+          Test Grid
+        </Link>
+        <Link to="/video-chat" className="hover:underline text-purple-600 font-semibold">
+          🎥 Video Chat
+        </Link>
+        <Link to="/kedar-tarun-video?user=kedar" className="hover:underline text-blue-600 font-semibold">
+          🎥 Kedar ↔ Tarun
+        </Link>
         {isAuthenticated ? (
           <>
             <Link to="/space" className="hover:underline">

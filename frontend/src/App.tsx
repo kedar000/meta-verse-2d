@@ -10,8 +10,8 @@ function AppContent() {
   const { user, loading, isAuthenticated } = useAuth()
   const location = useLocation()
 
-  // Hide navbar on test-grid route (space view)
-  const hideNavbar = location.pathname === "/test-grid"
+  // Hide navbar on test-grid and video-chat routes
+  const hideNavbar = location.pathname === "/test-grid" || location.pathname === "/video-chat"
 
   if (loading) {
     return (
