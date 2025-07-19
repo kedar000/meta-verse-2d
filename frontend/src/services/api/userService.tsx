@@ -29,7 +29,7 @@ export const userService = {
 
   // Get user profile by ID
   getUserById: async (userId: string): Promise<GetUserByIdResponse> => {
-    const response = await baseAPI.get(`/user/get-user/${userId}`)
+    const response = await baseAPI.get(`/user/get-user?id=${userId}`)
     return response.data
   },
 
